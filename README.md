@@ -18,7 +18,7 @@ The following SQL file contains scripts for the creation of the database and tab
 [Insurance SQL File](insurance-sql)
 
 ### Power BI Report
-[Power BI Report PDF](Power-BI-Insurance-PDF.pdf) <br>
+PDF for viewing: <sp> [Power BI Report PDF](Power-BI-Insurance-PDF.pdf) <br>
 Power BI file for consumers using Power BI: <sp>
 [Power BI File](Power-BI-Insurance-Report.pbit)
 
