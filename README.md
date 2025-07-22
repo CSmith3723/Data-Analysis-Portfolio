@@ -9,7 +9,7 @@ During the pandemic, I worked in customer service and became a customer service 
 ## Insurance Claims Complaints in Connecticut
 
 ### SQL File
-[Insurance SQL File](files/insurance-sql)
+[Insurance SQL File](insurance-sql)
 
 ### Power BI Report
 
