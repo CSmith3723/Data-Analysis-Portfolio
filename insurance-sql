@@ -1,0 +1,260 @@
+### Creating MySQL database and tables
+
+create schema insurance;
+
+use insurance;
+
+### Create cleaned table with all original data
+
+drop table insurance_complaints;
+
+CREATE TABLE insurance_complaints(
+File_No text,
+Company	varchar(100),
+Opened date, 
+Closed	date,
+Coverage varchar(100),
+SubCoverage varchar(100),
+Reason varchar(100),
+SubReason varchar(100), 
+Disposition varchar(100),
+Conclusion varchar(100), 
+Recovery double,
+Status varchar(100));
+
+load data local infile "C:/Users/csmit/Desktop/Insurance Project/Data/Full Data Cleaned.csv" into table insurance_complaints 
+	fields terminated by ',' enclosed by '"' lines terminated by '\n' ignore 1 rows;
+
+select * from insurance_complaints limit 5;
+
+### Creating Cleaned specific tables for normalization
+### Company & Recovery
+
+CREATE TABLE Company_Recovery(
+File_No varchar(10),
+Company	varchar(100),
+Recovery double);
+
+load data local infile "C:/Users/csmit/Desktop/Insurance Project/Data/Cleaned Data(Company & Recovery CH).csv" into 
+	table Company_Recovery fields terminated by ',' enclosed by '"' ignore 1 rows;
+
+select * from Company_Recovery limit 5;
+select count(*) from company_recovery;
+
+
+### Processing Time and Recovery ### named to indicate no dupe of file no
+
+create table Time_Recovery_nd(
+File_No varchar(10),
+Opened	date,
+Closed	date,
+Processing_Time_in_Days	int,
+Recovery double);
+
+load data local infile "C:/Users/csmit/Desktop/Insurance Project/Data/Cleaned Data(Time & Recovery Claim Handling).csv" into 
+	table Time_Recovery_nd fields terminated by ',' ignore 1 rows;
+
+select * from Time_Recovery_nd limit 5;
+delete from Time_Recovery_nd where Processing_Time_in_Days < 0;
+
+### SubReason and Recovery
+
+create table SubReason_Recovery(
+File_No varchar(10),
+SubReason varchar(100),
+Recovery double);
+
+load data local infile "C:/Users/csmit/Desktop/Insurance Project/Data/Cleaned Data(SubReason & Recovery CH).csv" into 
+	table SubReason_Recovery fields terminated by ',' ignore 1 rows;
+    
+select * from SubReason_Recovery limit 5;
+
+### Data Manipulation 
+
+use insurance;
+
+### Number of complaints with the reason 'Claim Handling' compared to total, with percentage
+
+select count(distinct File_No)
+from insurance_complaints;
+
+with ComplaintBreakdown as (
+select count(distinct File_No) as CH_Count
+from insurance_complaints
+where Reason = 'Claim Handling'
+),
+TotalComplaints as (
+	select count(distinct File_No) as Complaint_Total
+	from insurance_complaints)
+select 
+cb.CH_Count, 
+tc.Complaint_Total,
+concat(round(cb.CH_Count / tc.Complaint_Total * 100, 2), '%') as Percentage
+from ComplaintBreakdown cb, TotalComplaints tc;
+
+### Percentage breakdown of all Reason categories
+
+with ComplaintTotal as (
+select count(distinct File_No) as Complaint_Total
+	from insurance_complaints)
+	select 'Total' as Reason, Complaint_Total as Reason_Count, concat(100.00, '%') as Percentage
+	from ComplaintTotal
+union all
+	select 
+		ic.Reason, 
+		count(distinct ic.File_No) as Reason_Count,
+		concat(round(count(distinct ic.File_No) / ct.Complaint_Total * 100, 2),'%') as Percentage
+	from insurance_complaints ic
+	join ComplaintTotal ct
+	group by ic.Reason, ct.Complaint_Total
+	order by Reason_Count desc;
+
+
+### Total Recovery of all complaints for Reason Claim Handling
+
+select concat('$', round(sum(Recovery),2)) as 'Total Recovery from Claim Handling'
+from time_recovery_nd;
+
+
+### Calculating the longest processing time in days for Claim Handling complaints
+
+select tr.File_No, tr.Opened, tr.Closed, tr.Processing_Time_in_Days, sr.SubReason
+from time_recovery_nd tr
+join subreason_recovery sr
+on tr.File_No = sr.File_No
+order by Processing_Time_in_Days desc
+limit 10; 
+
+### Finding the average processing time in days for different subreasons, ordered by highest subreason count
+
+select sr.SubReason, Count(sr.SubReason) as Count, Round(avg(tr.Processing_Time_in_Days),0) as Avg_Processing_Days
+from subreason_recovery sr
+join time_recovery_nd tr
+on sr.File_No = tr.File_No
+group by sr.SubReason
+order by Count desc;
+
+### Finding the average processing time in days for different subreasons, ordered by average processing time in days
+
+select sr.SubReason, Count(sr.SubReason) as Count, Round(avg(tr.Processing_Time_in_Days),0) as Avg_Processing_Days
+from subreason_recovery sr
+join time_recovery_nd tr
+on sr.File_No = tr.File_No
+group by sr.SubReason
+order by Avg_Processing_Days desc;
+
+### Finding the coverage type that has the highest count of complaints
+
+select Coverage, count(Coverage) as cov_count
+from insurance_complaints
+group by Coverage
+order by cov_count desc;
+
+
+### Identifying the most comon SubReason for insurance complaints for each coverage type. Fields where Coverage is empty were removed. 
+### Partitioned by Coverage and ordered descending so that the highest count is in the first row and can be easily pulled to new table. 
+
+WITH SubReasonCounts AS (
+    SELECT Coverage, SubReason, COUNT(*) AS subreason_count,
+        ROW_NUMBER() OVER (PARTITION BY Coverage ORDER BY COUNT(*) DESC) AS rn
+    FROM insurance_complaints
+    WHERE Coverage <> ''
+    GROUP BY Coverage, SubReason
+)
+SELECT 
+    Coverage, 
+    SubReason, 
+    subreason_count
+FROM SubReasonCounts
+WHERE rn = 1
+order by subreason_count desc;
+
+### Identifying the most common SubReason per company
+
+
+WITH SubReasonCounts AS (
+    SELECT Company, SubReason, COUNT(*) AS subreason_count,
+        ROW_NUMBER() OVER (PARTITION BY Company ORDER BY COUNT(*) DESC) AS rn
+    FROM insurance_complaints
+    WHERE Company <> ''
+    GROUP BY Company, SubReason
+)
+SELECT 
+    Company, 
+    SubReason, 
+    subreason_count
+FROM SubReasonCounts
+WHERE rn = 1
+order by subreason_count desc;
+
+
+### Count of Companies by their most common complaint subreason.
+
+with SubReasonFrequency as (
+	SELECT row_number() over(partition by cr.Company order by count(SubReason) desc) as rn, cr.Company, sr.subreason, count(SubReason) as Cmplts
+    from company_recovery cr
+    join subreason_recovery sr
+    on cr.File_No = sr.File_No
+    group by Company, subreason
+    order by Cmplts desc)
+select SubReason, count(Cmplts) as num_companies
+from SubReasonFrequency
+where rn=1
+group by subreason
+order by num_companies desc;
+
+
+### Comparing total recovery by each company to Average of total recovery across all companies. 
+
+with CompanyRecovery as (
+select 
+	Company, 
+    round(sum(Recovery), 2) as total_company_recovery
+from company_recovery 
+group by Company
+),
+AvgAllComp as (
+select avg(total_company_recovery) as avg_recovery
+from CompanyRecovery)
+select 
+	'Average of All Companies' as Company,
+    ' ' as 'Total Company Recovery',
+    concat('$', round(avg_recovery, 2)) as 'Compared to Average'
+from AvgAllComp
+union all
+select 
+	cr.Company, 
+    concat('$', round(cr.total_company_recovery, 2)) as 'Total Company Recovery', 
+    (case
+		when cr.total_company_recovery > ac.avg_recovery then 'Above Average'
+        when cr.total_company_recovery < ac.avg_recovery then 'Below Average'
+        when cr.total_company_recovery = ac.avg_recovery then 'On Average'
+        else ''
+	 end) as 'Compared to Average'
+from CompanyRecovery cr, AvgAllComp ac;
+
+
+### Total Recovery per SubReason and percentage of total
+
+ with TotalRecovery as (
+	select sum(Recovery) as Total_Recovery
+	from time_recovery_nd),
+SubReasonRecovery as (
+	select SubReason, round(sum(Recovery),2) as recovery
+	from subreason_recovery
+	group by Subreason
+	order by recovery desc)
+select 
+	'All Subreasons' as SubReason, 
+	concat('$', round(Total_Recovery,2)) as Total_Recovery,
+	concat(100.00, '%') as Percentage
+from TotalRecovery
+	union all
+select sr.SubReason, concat('$', sr.recovery), concat(round(sr.recovery/tr.Total_Recovery * 100,2), '%')
+from TotalRecovery tr, SubReasonRecovery sr;
+
+
+
+
+
+
