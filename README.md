@@ -4,9 +4,9 @@ Hello! My name is Chris Smith and I am a former customer service leader, languag
 
 During the pandemic, I worked in customer service and became a customer service leader, further cementing my communication and teamwork capabilities. However, I knew I wanted to work in a more technical field that challenged me on a daily basis. In 2024, I completed a Bachelor's in Software Engineering. This portfolio is the result of my desire to use the data analysis skills I developed and continue to nurture, as well as parley into a new career. 
 
-Portfolio Projects
+#Portfolio Projects
 
-Insurance Claims Complaints in Connecticut
+##Insurance Claims Complaints in Connecticut
 
 SQL Files
 
