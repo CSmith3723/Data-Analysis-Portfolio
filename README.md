@@ -13,7 +13,7 @@ During the pandemic, I worked in customer service and became a customer service 
 
 ### Power BI Report
 [Power BI Report PDF](Power-BI-Insurance-PDF.pdf) <br>
-[Power BI File](Insurance-Complaints-Report.pbit)
+[Power BI File](Power-BI-Insurance-Report.pbit)
 
 ### Data Analysis Report
 [Data Analysis Report](Insurance-Complaints-Report.pdf)
