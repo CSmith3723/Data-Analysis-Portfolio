@@ -10,7 +10,13 @@ During the pandemic, I worked in customer service and became a customer service 
 
 ## Insurance Claims Complaints in Connecticut
 
-The goal of this project was to examine insurance claim complaints lodge against insurance companies in the state of Connecticut. I wanted to see if there was a clear relationship between factors such as the reason or processing time and the recovery amount for the complaints. 
+This project examined a data set containing information about insurance claim complaints lodged against insurance companies in the state of Connecticut from 2015 to 2025. 
+
+#### Goal:
+Determine if there was a clear relationship between factors such as the reason or processing time and the recovery amount for the complaints. Identifying these relationships might allow for a reduction in recovery amounts. 
+
+#### Results: 
+No relationship was established between the complaint reason, processing time, and recovery amount. Total recovery, either by company or by reason, appears to be drive primarily by the volume of complaints received. 
 
 
 ### SQL File
